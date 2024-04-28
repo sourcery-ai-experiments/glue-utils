@@ -2,20 +2,20 @@ from unittest.mock import patch
 
 import pytest
 from awsglue.context import GlueContext
-from glue_utils import ManagedGlueContext
+from glue_utils.glueetl import GlueContextManager
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
 
 
 @pytest.fixture
 def mock_job():
-    with patch("glue_utils.context.Job") as mocked:
+    with patch("glue_utils.glueetl.context.Job") as mocked:
         yield mocked
 
 
-class TestManagedGlueContext:
+class TestGlueContextManager:
     def test_as_context_manager(self, mock_job):
-        with ManagedGlueContext() as context:
+        with GlueContextManager() as context:
             self.assert_attributes(context=context)
             mock_job.return_value.init.assert_called_once_with("", {})
 
@@ -30,7 +30,7 @@ class TestManagedGlueContext:
     def test_as_context_manager_with_job_options(self, mock_job):
         job_options = {"JOB_NAME": "test-job-options-only"}
 
-        with ManagedGlueContext(
+        with GlueContextManager(
             job_options=job_options,
         ) as context:
             self.assert_attributes(context=context)
@@ -54,7 +54,7 @@ class TestManagedGlueContext:
             .set("Test.Name", "With Spark Conf")
         )
 
-        with ManagedGlueContext(
+        with GlueContextManager(
             job_options=job_options,
             spark_conf=spark_conf,
         ) as context:

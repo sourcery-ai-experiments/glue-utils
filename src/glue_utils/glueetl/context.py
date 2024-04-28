@@ -1,4 +1,4 @@
-"""Module providing the ManagedGlueContext class for managing GlueContext."""
+"""Module providing the GlueContextManager class for managing GlueContext."""
 
 from contextlib import ContextDecorator
 from types import TracebackType
@@ -9,7 +9,7 @@ from pyspark import SparkConf, SparkContext
 from typing_extensions import Self
 
 
-class ManagedGlueContext(ContextDecorator):
+class GlueContextManager(ContextDecorator):
     """A context manager that wraps a GlueContext.
 
     This context manager ensures that Job.commit() is called.
@@ -17,12 +17,14 @@ class ManagedGlueContext(ContextDecorator):
 
     glue_context: GlueContext
     job: Job
+    auto_commit: bool
 
     def __init__(
         self: Self,
         *,
         job_options: dict[str, str] | None = None,
         spark_conf: SparkConf | None = None,
+        auto_commit: bool = True,
     ) -> None:
         """Create the context manager with the given options and configuration.
 
@@ -32,8 +34,12 @@ class ManagedGlueContext(ContextDecorator):
             Dictionary of key-value pairs to pass to Job.init(), by default None
         spark_conf : SparkConf | None, optional
             Custom SparkConf to use with SparkContext.getOrCreate(), by default None
+        auto_commit : bool, optional
+            Whether to automatically commit the job, by default True
 
         """
+        super().__init__()
+
         job_options = job_options or {}
         job_name = job_options.get("JOB_NAME", "")
 
@@ -44,7 +50,7 @@ class ManagedGlueContext(ContextDecorator):
         self.job = Job(self.glue_context)
         self.job.init(job_name, job_options)
 
-        super().__init__()
+        self.auto_commit = auto_commit
 
     def __enter__(self: Self) -> GlueContext:
         """Enter the context manager and return the GlueContext.
@@ -81,6 +87,7 @@ class ManagedGlueContext(ContextDecorator):
             handled or not.
 
         """
-        self.job.commit()
+        if self.auto_commit:
+            self.job.commit()
 
         return None
